@@ -1,0 +1,61 @@
+@RestResource(urlMapping='/accountOperations/*')
+global with sharing class AccountRestResource {
+
+    @HttpPost
+    global static String createAccount(String name, String phoneNumber, String emailAddress, String residentialAddress) {
+        Account newAccount = new Account(
+            Name = name,
+            Phone = phoneNumber,
+            Email__c = emailAddress,
+            Residential_Address__c = residentialAddress
+        );
+        
+        insert newAccount;
+        return newAccount.Id;
+    }
+
+    @HttpGet
+    global static Account getAccountById() {
+        String accountId = RestContext.request.params.get('accountId');
+        return [SELECT Id, Name, Phone, Email__c, Residential_Address__c FROM Account WHERE Id = :accountId LIMIT 1];
+    }
+
+    @HttpPatch
+    global static String updateAccount(String accountId, String fieldName, String updatedValue) {
+        SObjectField fieldToUpdate;
+        
+        if (fieldName == 'Name') {
+            fieldToUpdate = Account.Name;
+        } else if (fieldName == 'Phone') {
+            fieldToUpdate = Account.Phone;
+        } else if (fieldName == 'Email') {
+            fieldToUpdate = Account.Email__c;
+        } else if (fieldName == 'ResidentialAddress') {
+            fieldToUpdate = Account.Residential_Address__c;
+        } else {
+            return 'Invalid field name';
+        }
+        
+        Account accountToUpdate = new Account(Id = accountId);
+        accountToUpdate.put(fieldToUpdate, updatedValue);
+        update accountToUpdate;
+        return 'Account updated successfully';
+    }
+
+    @HttpDelete
+    global static String deleteAccount() {
+        String accountId = RestContext.request.params.get('accountId');
+        
+        if (String.isNotBlank(accountId)) {
+            try {
+                Account accountToDelete = [SELECT Id FROM Account WHERE Id = :accountId LIMIT 1];
+                delete accountToDelete;
+                return 'Account deleted successfully';
+            } catch (Exception e) {
+                return 'Error deleting account: ' + e.getMessage();
+            }
+        } else {
+            return 'Missing or invalid accountId parameter';
+        }
+    }
+}
